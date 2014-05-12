@@ -40,12 +40,20 @@ describe "UserPages" do
         end
 
         it { should have_link('delete', href: user_path(User.first)) }
-        it "should be able to delte another user" do
+        it "should be able to delete another user" do
           expect do 
             click_link('delete', match: :first)
           end.to change(User, :count).by(-1)
         end
         it { should_not have_link('delete',href: user_path(admin)) }
+
+        describe "should not be able delete admins" do
+          before { sign_in admin, no_capybara: true }
+
+          it "should not be able delete yourself" do
+            expect { delete user_path(admin) }.not_to change(User, :count).by(-1)
+          end
+        end
       end
     end 
   end 
@@ -75,7 +83,7 @@ describe "UserPages" do
         fill_in "Name",         with: "Alen Amanbekov"
         fill_in "Email",        with: "khalifa.211@gmail.com"
         fill_in "Password",     with: "foobar"
-        fill_in "Confirmation", with: "foobar"
+        fill_in "Confirm Password", with: "foobar"
       end
 
       it "should create a user" do
@@ -131,6 +139,18 @@ describe "UserPages" do
       it { should have_selector('div.alert.alert-success') }
       specify { expect(user.reload.name).to eq new_name }
       specify { expect(user.reload.email).to eq new_email }
+    end
+
+    describe "forbidden attributes" do
+      let(:params) do
+        { user: { admin: true, password: user.password,
+                  password_confirmation: user.password } }
+      end
+      before do
+        sign_in user, no_capybara: true
+        patch user_path(user), params
+      end
+      specify { expect(user.reload).not_to be_admin }
     end
   end
 end
